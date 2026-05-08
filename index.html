@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frame-by-Frame Dance Prompt Builder — Auto-Translate</title>
+<style>
+:root {
+  --bg:#030712; --panel:#0b1220; --card:#0f172a; --border:#1e293b;
+  --text:#e2e8f0; --muted:#94a3b8; --teal:#14b8a6; --teal-2:#2dd4bf;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:radial-gradient(1200px 800px at 80% -20%, #042f2e 0%, transparent 60%), var(--bg);
+  color:var(--text); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,"Helvetica Neue",Arial;
+  line-height:1.5;
+}
+header{padding:28px 24px 8px; max-width:1400px; margin:0 auto}
+h1{font-size:clamp(24px,3vw,34px); margin:0 0 6px; letter-spacing:.2px}
+.subtitle{color:var(--muted); margin:0 0 12px}
+.app{max-width:1400px; margin:0 auto; padding:0 24px 40px; display:grid; grid-template-columns:1.15fr .85fr; gap:24px}
+@media(max-width:1100px){.app{grid-template-columns:1fr}}
+.card{
+  background:linear-gradient(180deg,rgba(255,255,255,.02),transparent),var(--card);
+  border:1px solid var(--border); border-radius:18px; padding:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03);
+  margin-bottom:16px;
+}
+.card h3{margin:0 0 8px; font-size:16px; display:flex; align-items:center; gap:10px}
+.step-num{width:26px; height:26px; display:inline-grid; place-items:center; background:#042f2e; color:var(--teal-2); border:1px solid #0a3d3a; border-radius:8px; font-size:13px; font-weight:700}
+.desc{color:var(--muted); font-size:13px; margin:0 0 12px}
+.choice{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:9px}
+.choice button{
+  appearance:none; background:#0b1320; border:1px solid var(--border); color:#cbd5e1;
+  padding:10px 12px; border-radius:12px; cursor:pointer; text-align:left; font-size:14px; transition:.2s;
+}
+.choice button:hover{border-color:#234c48; transform:translateY(-1px)}
+.choice button.active{background:linear-gradient(180deg,#082f2c,#071f1d); border-color:#115e59; color:#a7f3d0; box-shadow:0 0 0 1px #115e59 inset,0 6px 16px rgba(20,184,166,.15)}
+.choice.checks{grid-template-columns:1fr 1fr}
+@media(max-width:600px){.choice.checks{grid-template-columns:1fr}}
+.choice.checks label{display:flex; gap:8px; align-items:center; background:#0b1320; border:1px solid var(--border); padding:10px 12px; border-radius:12px; cursor:pointer; font-size:14px}
+.choice.checks label:hover{border-color:#234c48}
+.choice.checks input{accent-color:var(--teal)}
+.custom-input{grid-column:1/-1; display:none; margin-top:8px}
+.custom-input input{width:100%; background:#050c14; border:1px solid #1e293b; color:#e2e8f0; padding:10px 12px; border-radius:10px; font-size:14px}
+
+.right{position:sticky; top:20px; height:fit-content}
+.translate-toggle{display:flex; align-items:center; justify-content:space-between; background:#07161b; border:1px solid #0e3a38; border-radius:14px; padding:12px 14px; margin-bottom:14px; gap:12px}
+.translate-toggle span{font-size:14px; font-weight:700; color:#bffcf3}
+.translate-toggle small{display:block; color:var(--muted); font-weight:400; font-size:12px; margin-top:2px}
+.switch{position:relative; width:52px; height:28px; flex-shrink:0}
+.switch input{opacity:0; width:0; height:0}
+.slider{position:absolute; inset:0; background:#1e293b; border-radius:999px; transition:.25s; border:1px solid #334155}
+.slider:before{content:""; position:absolute; height:22px; width:22px; left:3px; top:2.5px; background:white; border-radius:50%; transition:.25s; box-shadow:0 2px 6px rgba(0,0,0,.3)}
+input:checked + .slider{background:#0f766e; border-color:#14b8a6}
+input:checked + .slider:before{transform:translateX(24px); background:#a7f3d0}
+
+.prompt-card .card-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
+.prompt-card h3{margin:0; font-size:15px; color:#bffcf3}
+#copyBtn{background:#0d2d2a; border:1px solid #115e59; color:#7fffe5; padding:8px 12px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600}
+#copyBtn:hover{background:#0f3d38}
+#promptOutput{background:#050c14; border:1px solid #0d1b2a; border-radius:12px; padding:14px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px; color:#d1fae5; white-space:pre-wrap; line-height:1.65; max-height:340px; overflow:auto}
+.original-terms{margin-top:10px; padding:10px 12px; background:#07121c; border:1px dashed #1e3a4a; border-radius:10px; font-size:12px; color:#9fb2c7}
+.original-terms div{margin:3px 0}
+.original-terms em{color:#5eead4; font-style:normal}
+
+.flow{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.flow-step{background:#071824; border:1px solid #143344; color:#a5f3fc; padding:6px 10px; border-radius:999px; font-size:12px; display:flex; gap:6px; align-items:center}
+.flow-step b{background:#0e3a4a; color:#67e8f9; padding:2px 6px; border-radius:6px; font-size:11px}
+.arrow{color:#334155}
+
+details{background:#07121c; border:1px solid #132434; border-radius:12px; padding:12px 14px}
+summary{cursor:pointer; font-weight:600; color:#99f6e4; list-style:none; display:flex; justify-content:space-between; align-items:center}
+summary::-webkit-details-marker{display:none}
+table{width:100%; border-collapse:collapse; margin-top:10px; font-size:13px}
+th,td{text-align:left; padding:8px 10px; border-bottom:1px solid #17243a; vertical-align:top}
+th{color:#67e8f9; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em}
+td:first-child{color:#f0fdfa; font-weight:600; width:34%}
+tr:last-child td{border-bottom:none}
+.footer-note{color:var(--muted); font-size:12px; text-align:center; margin-top:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Frame-by-Frame Dance Prompt Builder <span style="color:var(--teal-2)">→</span></h1>
+  <p class="subtitle">Choose-Your-Own-Adventure with Auto-Translate. Builds locked-identity prompts AI video models actually follow.</p>
+</header>
+
+<div class="app">
+  <div class="left">
+    <!-- STEP 1 -->
+    <div class="card">
+      <h3><span class="step-num">1</span> Subject Lock</h3>
+      <p class="desc">Who is dancing? Locks identity for all frames.</p>
+      <div class="choice" data-step="subject">
+        <button class="active" data-value="A woman in her 20s, long black hair, wearing a red silk dress">Woman • red dress</button>
+        <button data-value="A man in his 30s, short dark hair, black suit and white shirt">Man • black suit</button>
+        <button data-value="A teen dancer, curly hair, wearing streetwear hoodie and joggers">Teen • streetwear</button>
+        <button data-value="A ballerina, blonde bun, white tutu and tights">Ballerina • white tutu</button>
+        <button data-value="custom" data-custom="true">Custom…</button>
+      </div>
+      <div class="custom-input" id="custom-subject"><input placeholder="Describe subject in detail…"></div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="card">
+      <h3><span class="step-num">2</span> Start Pose</h3>
+      <p class="desc">Exact frame 0 position.</p>
+      <div class="choice" data-step="pose">
+        <button class="active" data-value="standing centered facing camera, feet hip-width apart, arms relaxed at sides">Facing camera • standing</button>
+        <button data-value="in 3/4 profile facing left, weight on left foot, right toe pointed">Profile left • poised</button>
+        <button data-value="seated on floor, legs crossed, back straight, hands on knees">Seated floor</button>
+        <button data-value="back to camera, standing, head turned slightly right">Back to camera</button>
+        <button data-value="arms raised overhead in V shape, feet in first position">Arms up V</button>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="card">
+      <h3><span class="step-num">3</span> Movement Type</h3>
+      <p class="desc">Pick technical or plain. Toggle handles translation.</p>
+      <div class="choice" data-step="movement">
+        <button class="active" data-value="plié">Plié</button>
+        <button data-value="relevé">Relevé</button>
+        <button data-value="pirouette">Pirouette</button>
+        <button data-value="floorwork">Floorwork</button>
+        <button data-value="vibratory">Vibratory</button>
+        <button data-value="isolations">Isolations</button>
+        <button data-value="weight release">Weight Release</button>
+        <button data-value="step forward with right foot">Simple step</button>
+        <button data-value="arm wave from left to right">Arm wave</button>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="card">
+      <h3><span class="step-num">4</span> Pathway</h3>
+      <p class="desc">Where the body travels.</p>
+      <div class="choice" data-step="pathway">
+        <button class="active" data-value="stays in place, no travel, centered">In place</button>
+        <button data-value="travels forward 2 feet, slow controlled">Move forward</button>
+        <button data-value="travels backward 2 feet">Move back</button>
+        <button data-value="rotates 90 degrees right in place">Turn 90° right</button>
+        <button data-value="traces small circle to the left, 3 feet diameter">Small circle left</button>
+        <button data-value="level change from standing high to low crouch">High → low</button>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="card">
+      <h3><span class="step-num">5</span> Timing</h3>
+      <p class="desc">Control speed for AI.</p>
+      <div class="choice" data-step="timing">
+        <button data-value="1 second total, quick burst">1s quick</button>
+        <button class="active" data-value="2 seconds total, smooth and controlled">2s smooth</button>
+        <button data-value="4 seconds total, slow motion">4s slow-mo</button>
+        <button data-value="holds for 1 second, then moves for 2 seconds">Hold 1s → move 2s</button>
+        <button data-value="continuous loop for 3 seconds">3s loop</button>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="card">
+      <h3><span class="step-num">6</span> Consistency Guards</h3>
+      <p class="desc">Prevent morphing, extra limbs, background shifts.</p>
+      <div class="choice checks" data-step="guards">
+        <label><input type="checkbox" checked data-value="same face, no morphing"> Same face</label>
+        <label><input type="checkbox" checked data-value="lock hair style and color"> Lock hair</label>
+        <label><input type="checkbox" checked data-value="lock clothing and colors"> Lock clothing</label>
+        <label><input type="checkbox" checked data-value="lock background, no changes"> Lock background</label>
+        <label><input type="checkbox" checked data-value="lock lighting, soft studio"> Lock lighting</label>
+        <label><input type="checkbox" checked data-value="camera locked tripod"> Camera locked</label>
+        <label><input type="checkbox" checked data-value="unnerving alignment"> Unnerving alignment</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="translate-toggle">
+      <div>
+        <span>Auto-Translate Dance Terms → Plain Visual</span>
+        <small>Converts ballet jargon to visual descriptions AI understands</small>
+      </div>
+      <label class="switch"><input type="checkbox" id="autoTranslate" checked><span class="slider"></span></label>
+    </div>
+
+    <div class="card prompt-card">
+      <div class="card-header">
+        <h3>Live Prompt</h3>
+        <button id="copyBtn">Copy</button>
+      </div>
+      <pre id="promptOutput"></pre>
+      <div id="originalTerms" class="original-terms" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:10px; font-size:14px; color:#a5f3fc">Flow Visualization</h3>
+      <div id="flowchart" class="flow"></div>
+    </div>
+
+    <div class="card">
+      <details id="dictDetails">
+        <summary>Translation Dictionary <span style="opacity:.7">▾</span></summary>
+        <table id="dictTable"></table>
+      </details>
+    </div>
+    <p class="footer-note">Tip: Keep one movement per prompt. Generate clip, then use last frame as start for next.</p>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const translations = {
+    "plié": "knees bend slowly while feet stay flat on ground, back straight, then rise up",
+    "relevé": "rise up onto toes, legs straight",
+    "pirouette": "spin in place on one foot, arms tucked in",
+    "floorwork": "lower body to ground, hands and knees touch floor, move close to ground",
+    "vibratory": "small fast shaking motion, 2-3 shakes per second, staying in place",
+    "isolations": "move only shoulders/hips while rest of body stays still",
+    "weight release": "slowly sink down toward floor",
+    "unnerving alignment": "limbs stay straight, normal human proportions"
+  };
+
+  const state = {
+    subject: "A woman in her 20s, long black hair, wearing a red silk dress",
+    pose: "standing centered facing camera, feet hip-width apart, arms relaxed at sides",
+    movement: "plié",
+    pathway: "stays in place, no travel, centered",
+    timing: "2 seconds total, smooth and controlled",
+    guards: ["same face, no morphing","lock hair style and color","lock clothing and colors","lock background, no changes","lock lighting, soft studio","camera locked tripod","unnerving alignment"]
+  };
+
+  function translateText(text, auto, used) {
+    let result = text;
+    Object.entries(translations).forEach(([term, plain]) => {
+      const check = new RegExp(`\\b${term}\\b`, 'i');
+      if (check.test(text)) {
+        if (!used.find(u => u.original.toLowerCase() === term.toLowerCase())) {
+          used.push({original: term, translated: plain});
+        }
+        if (auto) {
+          const replaceRegex = new RegExp(`\\b${term}\\b`, 'gi');
+          result = result.replace(replaceRegex, plain);
+        }
+      }
+    });
+    return result;
+  }
+
+  function generatePrompt() {
+    const auto = document.getElementById('autoTranslate').checked;
+    const used = [];
+
+    const subject = translateText(state.subject, auto, used);
+    const pose = translateText(state.pose, auto, used);
+    const movement = translateText(state.movement, auto, used);
+    const pathway = translateText(state.pathway, auto, used);
+    const timing = translateText(state.timing, auto, used);
+    const guardsText = translateText(state.guards.join('; '), auto, used);
+
+    const prompt = `Create a FRAME-BY-FRAME dance video. Maintain absolute identity consistency.
+
+SUBJECT LOCK: ${subject}. Same exact person in every frame. No morphing, no duplicates.
+
+START POSE (Frame 0): ${pose}.
+
+ACTION:
+1) ${movement}
+2) Then ${pathway}
+
+TIMING: ${timing}.
+
+CONSISTENCY GUARDS: ${guardsText}.
+
+RENDER: Photorealistic, 24fps, smooth motion, physically accurate anatomy, no glitch, no blur.`;
+
+    document.getElementById('promptOutput').textContent = prompt;
+
+    const origEl = document.getElementById('originalTerms');
+    if (used.length) {
+      if (auto) {
+        origEl.innerHTML = used.map(u => `<div>Original term: <em>${u.original}</em> → "${u.translated}"</div>`).join('');
+      } else {
+        origEl.innerHTML = used.map(u => `<div>Technical term preserved: <em>${u.original}</em> <span style="opacity:.7">(toggle ON to translate)</span></div>`).join('');
+      }
+      origEl.style.display = 'block';
+    } else {
+      origEl.style.display = 'none';
+    }
+    updateFlow();
+  }
+
+  function updateFlow() {
+    const flow = document.getElementById('flowchart');
+    const items = [
+      {n:1, t: state.subject.split(',')[0]},
+      {n:2, t: state.pose.split(',')[0]},
+      {n:3, t: state.movement},
+      {n:4, t: state.pathway.split(',')[0]},
+      {n:5, t: state.timing.split(' ')[0] + ' ' + state.timing.split(' ')[1]},
+      {n:6, t: state.guards.length + ' guards'}
+    ];
+    flow.innerHTML = items.map((it,i) => 
+      `<div class="flow-step"><b>${it.n}</b>${it.t}</div>${i<5?'<div class="arrow">→</div>':''}`
+    ).join('');
+  }
+
+  // choice buttons
+  document.querySelectorAll('.choice[data-step]').forEach(group => {
+    const step = group.dataset.step;
+    if (step === 'guards') return;
+    group.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        if (btn.dataset.custom) {
+          document.getElementById('custom-subject').style.display = 'block';
+          return;
+        }
+        state[step] = btn.dataset.value;
+        generatePrompt();
+      });
+    });
+  });
+
+  // custom subject
+  const customInput = document.querySelector('#custom-subject input');
+  customInput.addEventListener('input', e => {
+    state.subject = e.target.value || 'custom subject';
+    generatePrompt();
+  });
+  const customBtn = document.querySelector('[data-custom]');
+  if (customBtn) {
+    customBtn.addEventListener('click', ()=> {
+      document.getElementById('custom-subject').style.display='block';
+      customInput.focus();
+    });
+  }
+
+  // guards
+  document.querySelectorAll('.choice.checks input').forEach(cb => {
+    cb.addEventListener('change', () => {
+      state.guards = Array.from(document.querySelectorAll('.choice.checks input:checked')).map(i=>i.dataset.value);
+      generatePrompt();
+    });
+  });
+
+  // toggle
+  document.getElementById('autoTranslate').addEventListener('change', generatePrompt);
+
+  // copy
+  document.getElementById('copyBtn').addEventListener('click', (e) => {
+    const btn = e.target;
+    navigator.clipboard.writeText(document.getElementById('promptOutput').textContent).then(()=>{
+      btn.textContent = 'Copied!';
+      setTimeout(()=>btn.textContent='Copy',1400);
+    });
+  });
+
+  // dictionary table
+  const dictTable = document.getElementById('dictTable');
+  dictTable.innerHTML = `<tr><th>Dance Term</th><th>Plain Visual</th></tr>` + 
+    Object.entries(translations).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+
+  generatePrompt();
+});
+</script>
+</body>
+</html>
